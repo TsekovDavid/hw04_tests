@@ -49,7 +49,7 @@ class StaticURLTests(TestCase):
     def test_post_create_url_redirect_anonymous_on_admin_login(self):
         """Перенаправляет анонимного пользователя /create/"""
         response = self.guest_client.get("/create/", follow=True)
-        self.assertRedirects(response, (f"/auth/login/?next=/create/"))
+        self.assertRedirects(response, ("/auth/login/?next=/create/"))
 
     def test_post_edit_url_redirect_anonymous_on_admin_login(self):
         """Перенаправляет анонимного пользователя и не автора поста
