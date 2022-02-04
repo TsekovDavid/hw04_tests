@@ -5,9 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import PostForm
 from .models import Group, Post, User
 
+PAGINATOR_CONST = 10
 
-def pages_creator(request, post_list):
-    return Paginator(post_list.order_by("-pub_date"), 10).get_page(
+
+def paginator_view(request, post_list):
+    return Paginator(post_list, PAGINATOR_CONST).get_page(
         request.GET.get("page")
     )
 
@@ -15,40 +17,36 @@ def pages_creator(request, post_list):
 def index(request):
     return render(
         request,
-        "posts/index.html",
-        {
-            "page_obj": pages_creator(request, Post.objects.all()),
-        },
-    )
+        "posts/index.html", {
+            "page_obj": paginator_view(request, Post.objects.all()),
+        })
 
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     return render(
         request,
-        "posts/group_list.html",
-        {
+        "posts/group_list.html", {
             "group": group,
-            "page_obj": pages_creator(request, group.posts.all()),
-        },
-    )
+            "page_obj": paginator_view(request, group.posts.all()),
+        })
 
 
 def profile(request, username):
     user = get_object_or_404(User, username=username)
     return render(
         request,
-        "posts/profile.html",
-        {
+        "posts/profile.html", {
             "author": user,
-            "page_obj": pages_creator(request, user.posts.all()),
-        },
-    )
+            "page_obj": paginator_view(request, user.posts.all()),
+        })
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    return render(request, "posts/post_detail.html", {"post": post})
+    return render(
+        request, "posts/post_detail.html", {
+            "post": get_object_or_404(Post, id=post_id)
+        })
 
 
 @login_required

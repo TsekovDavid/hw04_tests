@@ -1,71 +1,91 @@
-from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from posts.models import Group, Post
 
-User = get_user_model()
+from posts.models import Group, Post, User
+
+CONST_SLUG = "testslug"
+AUTHOR_USERNAME = "Abraham"
+NOT_AUTHOR_USERNAME = "Isaak"
+POST_TEXT = "Тестовый текст"
+GROUP_TITLE = "Тестовая группа"
+GROUP_DESCRIPTION = "Тестовое описание"
+URL_POST_EDIT = "posts:post_edit"
+URL_POST_DETAIL = "posts:post_detail"
+URL_PROFFILE = reverse("posts:profile", args=[AUTHOR_USERNAME])
+URL_POST_CREATE = reverse("posts:post_create")
 
 
 class PostFormTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.auth_user = User.objects.create_user(username="testuser")
+        cls.user = User.objects.create_user(username=NOT_AUTHOR_USERNAME)
+        cls.auth_user = User.objects.create_user(username=AUTHOR_USERNAME)
         cls.group = Group.objects.create(
-            title="Тестовая группа",
-            slug="testslug",
-            description="Тестовое описание",
-        )
-        cls.post = Post.objects.create(
-            author=cls.auth_user,
-            text="Тестовый текст",
-            group=cls.group,
+            title=GROUP_TITLE,
+            slug=CONST_SLUG,
+            description=GROUP_DESCRIPTION,
         )
 
     def setUp(self):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.auth_user)
+        self.not_author_authorized_client = Client()
+        self.not_author_authorized_client.force_login(self.user)
+        self.post = Post.objects.create(
+            author=self.auth_user,
+            text=POST_TEXT,
+            group=self.group,
+        )
 
     def test_post_edit(self):
         """Валидная форма обновляет выбранный пост."""
+        REFRESHED_TEXT = "Новый текст для поста"
+
         post = self.post
         form_data = {
-            "text": "Новый текст для поста",
+            "text": REFRESHED_TEXT,
+            "group": self.group.pk,
         }
         response = self.authorized_client.post(
-            reverse("posts:post_edit", kwargs={"post_id": post.id}),
+            reverse(URL_POST_EDIT, args=[post.id]),
             data=form_data,
         )
         # Обновляем post методом refresh_from_db()
         post.refresh_from_db()
-        expected_object_text = post.text
-        print(reverse("posts:post_detail", kwargs={"post_id": post.id}))
         self.assertRedirects(
-            response, reverse("posts:post_detail", kwargs={"post_id": post.id})
+            response, reverse(URL_POST_DETAIL, args=[post.id])
         )
-        self.assertEqual(expected_object_text, "Новый текст для поста")
+        self.assertTrue(
+            Post.objects.filter(
+                text=REFRESHED_TEXT,
+                group=self.group.id
+            ).exists()
+        )
+        # Проверяем редактирование поста не автором
+        response = self.not_author_authorized_client.get(
+            reverse(URL_POST_EDIT, args=[post.id])
+        )
+        self.assertRedirects(
+            response, reverse(URL_POST_DETAIL, args=[post.id]))
 
     def test_create_post_form(self):
         """Валидная форма создает новый пост."""
-        posts_count = Post.objects.count()
+        NEW_POST_TEXT = "Тестовый текст 123"
         form_data = {
-            "text": "Тестовый текст 123",
+            "text": NEW_POST_TEXT,
             "group": self.group.id,
         }
-        response = self.authorized_client.post(
-            reverse("posts:post_create"),
-            data=form_data,
-        )
-        self.assertRedirects(
-            response,
-            reverse(
-                "posts:profile", kwargs={"username": self.auth_user.username}
-            ),
-        )
-        self.assertEqual(Post.objects.count(), posts_count + 1)
+        # Очищаем бд
+        Post.objects.all().delete()
+        # Создаем новый пост, он будет  1 единственный в бд
+        response = self.authorized_client.post(URL_POST_CREATE, data=form_data)
+        self.assertRedirects(response, URL_PROFFILE)
         self.assertTrue(
             Post.objects.filter(
-                text="Тестовый текст 123",
+                text=NEW_POST_TEXT,
+                group=self.group.id,
+                author=self.auth_user
             ).exists()
         )
