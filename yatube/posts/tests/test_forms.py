@@ -33,6 +33,7 @@ class PostFormTest(TestCase):
         self.authorized_client.force_login(self.auth_user)
         self.not_author_authorized_client = Client()
         self.not_author_authorized_client.force_login(self.user)
+        # Пост в сетапе, что бы после очистки бд, он вновь создался
         self.post = Post.objects.create(
             author=self.auth_user,
             text=POST_TEXT,
@@ -46,7 +47,8 @@ class PostFormTest(TestCase):
         post = self.post
         form_data = {
             "text": REFRESHED_TEXT,
-            "group": self.group.pk,
+            "group": self.group.id,
+            
         }
         response = self.authorized_client.post(
             reverse(URL_POST_EDIT, args=[post.id]),
@@ -60,7 +62,8 @@ class PostFormTest(TestCase):
         self.assertTrue(
             Post.objects.filter(
                 text=REFRESHED_TEXT,
-                group=self.group.id
+                group=self.group.id,
+                author=self.auth_user
             ).exists()
         )
         # Проверяем редактирование поста не автором

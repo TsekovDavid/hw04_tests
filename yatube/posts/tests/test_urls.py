@@ -1,29 +1,46 @@
-from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
-from posts.models import Group, Post
 
-User = get_user_model()
+from posts.models import Group, Post, User
+
+CONST_SLUG = "testslug"
+AUTHOR_USERNAME = "Abraham"
+NOT_AUTHOR_USERNAME = "Isaak"
+POST_TEXT = "Тестовый текст, длинее 15 символов"
+GROUP_TITLE = "Тестовая группа"
+GROUP_DESCRIPTION = "Тестовое описание"
+URL_POST_DETAIL = "posts:post_detail"
+URL_POST_CREATE = "/create/"
+URL_INDEX = "/"
+URL_GROUP_LIST = f"/group/{CONST_SLUG}/"
+URL_PROFFILE = "posts:profile"
+URL_LOGIN = "/auth/login/"
+FOLLOW_REDIRECT_CREATE_TO_LOGIN = f"{URL_LOGIN}?next={URL_POST_CREATE}"
 
 
 class StaticURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.auth_user = User.objects.create_user(username="testauth")
+        cls.auth_user = User.objects.create_user(username=AUTHOR_USERNAME)
+        cls.user = User.objects.create_user(username=NOT_AUTHOR_USERNAME)
         cls.group = Group.objects.create(
-            title="Тестовая группа",
-            slug="testslug",
-            description="Тестовое описание",
+            title=GROUP_TITLE,
+            slug=CONST_SLUG,
+            description=GROUP_DESCRIPTION,
         )
         cls.post = Post.objects.create(
             author=cls.auth_user,
-            text="Тестовый текст, длинее 15 символов",
+            text=POST_TEXT,
             group=cls.group,
         )
+        cls.URL_PROFFILE = f"/profile/{cls.auth_user}/"
+        cls.URL_POST_DETAIL = f"/posts/{cls.post.id}/"
+        cls.URL_POST_EDIT = f"/posts/{cls.post.id}/edit/"
+        cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = f"{URL_LOGIN}?next={cls.URL_POST_EDIT}"
+
 
     def setUp(self):
         self.guest_client = Client()
-        self.user = User.objects.create_user(username="HasNoName")
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         self.authorized_client_post_author = Client()
@@ -32,37 +49,36 @@ class StaticURLTests(TestCase):
     def test_urls_exists_at_desired_locations(self):
         """Проверка доступности URL."""
         urls = [
-            "/",
-            "/group/testslug/",
-            f"/profile/{self.auth_user}/",
-            f"/posts/{self.post.id}/",
-            "/create/",
-            f"/posts/{self.post.id}/edit/",
-            "/about/tech/",
-            "/about/author/",
+            URL_INDEX,
+            URL_GROUP_LIST,
+            self.URL_PROFFILE,
+            self.URL_POST_DETAIL,
+            URL_POST_CREATE,
+            self.URL_POST_EDIT,
         ]
         for url in urls:
             with self.subTest(url=url):
-                response = self.authorized_client_post_author.get(url)
-                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    self.authorized_client_post_author.get(
+                        url).status_code, 200)
 
-    def test_post_create_url_redirect_anonymous_on_admin_login(self):
-        """Перенаправляет анонимного пользователя /create/"""
-        response = self.guest_client.get("/create/", follow=True)
-        self.assertRedirects(response, ("/auth/login/?next=/create/"))
-
-    def test_post_edit_url_redirect_anonymous_on_admin_login(self):
-        """Перенаправляет анонимного пользователя и не автора поста
-        /posts/post.id/edit.
-        """
-        response = self.guest_client.get(
-            f"/posts/{self.post.id}/edit/", follow=True
-        )
-        self.assertRedirects(
-            response, (f"/auth/login/?next=/posts/{self.post.id}/edit/")
-        )
-        response = self.authorized_client.get(f"/posts/{self.post.id}/edit")
-        self.assertEqual(response.status_code, 301)
+    def test_post_create_or_edit_redirect_login(self):
+        """Перенаправляет анонимного пользователя и не автора поста"""
+        urls = [URL_POST_CREATE, self.URL_POST_EDIT]
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.guest_client.get(url)
+                self.assertEqual(
+                    response.status_code,
+                    302)
+        urls = [
+            [self.guest_client, URL_POST_CREATE, FOLLOW_REDIRECT_CREATE_TO_LOGIN],
+            [self.guest_client, self.URL_POST_EDIT, self.FOLLOW_REDIRECT_EDIT_TO_LOGIN],
+            [self.authorized_client, self.URL_POST_EDIT, self.URL_POST_DETAIL]
+        ]
+        for client, url, redurl in urls:
+            with self.subTest(value=url):
+                self.assertRedirects(client.get(url, follow=True), redurl)
 
     def test_urls_uses_correct_template(self):
         """URL-адреса используют соответствующие шаблоны."""
@@ -76,5 +92,6 @@ class StaticURLTests(TestCase):
         }
         for address, template in templates_url_names.items():
             with self.subTest(address=address):
-                response = self.authorized_client_post_author.get(address)
-                self.assertTemplateUsed(response, template)
+                self.assertTemplateUsed(
+                    self.authorized_client_post_author.get(address), template
+                )
