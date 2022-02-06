@@ -2,7 +2,7 @@ from django.test import Client, TestCase
 
 from posts.models import Group, Post, User
 
-CONST_SLUG = "testslug"
+SLUG = "testslug"
 AUTHOR_USERNAME = "Abraham"
 NOT_AUTHOR_USERNAME = "Isaak"
 POST_TEXT = "Тестовый текст, длинее 15 символов"
@@ -11,7 +11,7 @@ GROUP_DESCRIPTION = "Тестовое описание"
 URL_POST_DETAIL = "posts:post_detail"
 URL_POST_CREATE = "/create/"
 URL_INDEX = "/"
-URL_GROUP_LIST = f"/group/{CONST_SLUG}/"
+URL_GROUP_LIST = f"/group/{SLUG}/"
 URL_PROFFILE = "posts:profile"
 URL_LOGIN = "/auth/login/"
 FOLLOW_REDIRECT_CREATE_TO_LOGIN = f"{URL_LOGIN}?next={URL_POST_CREATE}"
@@ -25,7 +25,7 @@ class StaticURLTests(TestCase):
         cls.user = User.objects.create_user(username=NOT_AUTHOR_USERNAME)
         cls.group = Group.objects.create(
             title=GROUP_TITLE,
-            slug=CONST_SLUG,
+            slug=SLUG,
             description=GROUP_DESCRIPTION,
         )
         cls.post = Post.objects.create(
@@ -37,7 +37,6 @@ class StaticURLTests(TestCase):
         cls.URL_POST_DETAIL = f"/posts/{cls.post.id}/"
         cls.URL_POST_EDIT = f"/posts/{cls.post.id}/edit/"
         cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = f"{URL_LOGIN}?next={cls.URL_POST_EDIT}"
-
 
     def setUp(self):
         self.guest_client = Client()
