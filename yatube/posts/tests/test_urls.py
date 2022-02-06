@@ -36,7 +36,8 @@ class StaticURLTests(TestCase):
         cls.URL_PROFFILE = f"/profile/{cls.auth_user}/"
         cls.URL_POST_DETAIL = f"/posts/{cls.post.id}/"
         cls.URL_POST_EDIT = f"/posts/{cls.post.id}/edit/"
-        cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = f"{URL_LOGIN}?next={cls.URL_POST_EDIT}"
+        cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = \
+            f"{URL_LOGIN}?next={cls.URL_POST_EDIT}"
 
     def setUp(self):
         self.guest_client = Client()
@@ -71,9 +72,12 @@ class StaticURLTests(TestCase):
                     response.status_code,
                     302)
         urls = [
-            [self.guest_client, URL_POST_CREATE, FOLLOW_REDIRECT_CREATE_TO_LOGIN],
-            [self.guest_client, self.URL_POST_EDIT, self.FOLLOW_REDIRECT_EDIT_TO_LOGIN],
-            [self.authorized_client, self.URL_POST_EDIT, self.URL_POST_DETAIL]
+            [self.guest_client, URL_POST_CREATE,
+                FOLLOW_REDIRECT_CREATE_TO_LOGIN],
+            [self.guest_client, self.URL_POST_EDIT,
+                self.FOLLOW_REDIRECT_EDIT_TO_LOGIN],
+            [self.authorized_client, self.URL_POST_EDIT,
+                self.URL_POST_DETAIL],
         ]
         for client, url, redurl in urls:
             with self.subTest(value=url):

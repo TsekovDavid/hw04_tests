@@ -1,6 +1,6 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms 
+from django import forms
 
 from posts.models import Group, Post, User
 
@@ -49,7 +49,6 @@ class PostFormTest(TestCase):
         form_data = {
             "text": REFRESHED_TEXT,
             "group": self.group.id,
-            
         }
         response = self.authorized_client.post(
             reverse(URL_POST_EDIT, args=[post.id]),
@@ -93,18 +92,18 @@ class PostFormTest(TestCase):
                 author=self.auth_user
             ).exists()
         )
-    
+
     def test_form_post_create_and_post_edit(self):
-            """Форма создания поста корректна."""
-            response = self.authorized_client.get(URL_POST_CREATE)
-            form_fields = {
-                "text": forms.fields.CharField,
-                "group": forms.fields.ChoiceField,
-            }
-            for value, expected in form_fields.items():
-                with self.subTest(value=value):
-                    form_field = response.context.get("form").fields.get(value)
-                    self.assertIsInstance(form_field, expected)
+        """Форма создания поста корректна."""
+        response = self.authorized_client.get(URL_POST_CREATE)
+        form_fields = {
+            "text": forms.fields.CharField,
+            "group": forms.fields.ChoiceField,
+        }
+        for value, expected in form_fields.items():
+            with self.subTest(value=value):
+                form_field = response.context.get("form").fields.get(value)
+                self.assertIsInstance(form_field, expected)
 
     def test_form_post_edit(self):
         """Форма редактирования поста корректна"""
