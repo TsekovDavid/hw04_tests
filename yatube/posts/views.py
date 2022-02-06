@@ -23,12 +23,10 @@ def index(request):
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
-    return render(
-        request,
-        "posts/group_list.html", {
-            "group": group,
-            "page_obj": paginator_view(request, group.posts.all()),
-        })
+    return render(request, "posts/group_list.html", {
+        "group": group,
+        "page_obj": paginator_view(request, group.posts.all()),
+    })
 
 
 def profile(request, username):

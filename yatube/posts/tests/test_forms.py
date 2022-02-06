@@ -4,16 +4,18 @@ from django import forms
 
 from posts.models import Group, Post, User
 
-CONST_SLUG = "testslug"
+
 AUTHOR_USERNAME = "Abraham"
 NOT_AUTHOR_USERNAME = "Isaak"
 POST_TEXT = "Тестовый текст"
 GROUP_TITLE = "Тестовая группа"
+SLUG = "testslug"
 GROUP_DESCRIPTION = "Тестовое описание"
-URL_POST_EDIT = "posts:post_edit"
-URL_POST_DETAIL = "posts:post_detail"
-URL_PROFFILE = reverse("posts:profile", args=[AUTHOR_USERNAME])
-URL_POST_CREATE = reverse("posts:post_create")
+SECOND_GROUP_TITLE = "Вторая тестовая группа"
+SECOND_SLUG = "new_group"
+SECOND_GROUP_DESCRIPTION = "Тестовое описание второй группы"
+PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
+POST_CREATE_URL = reverse("posts:post_create")
 
 
 class PostFormTest(TestCase):
@@ -24,9 +26,21 @@ class PostFormTest(TestCase):
         cls.auth_user = User.objects.create_user(username=AUTHOR_USERNAME)
         cls.group = Group.objects.create(
             title=GROUP_TITLE,
-            slug=CONST_SLUG,
+            slug=SLUG,
             description=GROUP_DESCRIPTION,
         )
+        cls.group2 = Group.objects.create(
+            title=SECOND_GROUP_TITLE,
+            slug=SECOND_SLUG,
+            description=SECOND_GROUP_DESCRIPTION,
+        )
+        cls.post = Post.objects.create(
+            author=cls.auth_user,
+            text=POST_TEXT,
+            group=cls.group,
+        )
+        cls.POST_DETAIL_URL = reverse("posts:post_detail", args=[cls.post.id])
+        cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
 
     def setUp(self):
         self.guest_client = Client()
@@ -34,44 +48,39 @@ class PostFormTest(TestCase):
         self.authorized_client.force_login(self.auth_user)
         self.not_author_authorized_client = Client()
         self.not_author_authorized_client.force_login(self.user)
-        # Пост в сетапе, что бы после очистки бд, он вновь создался
-        self.post = Post.objects.create(
-            author=self.auth_user,
-            text=POST_TEXT,
-            group=self.group,
-        )
 
     def test_post_edit(self):
         """Валидная форма обновляет выбранный пост."""
         REFRESHED_TEXT = "Новый текст для поста"
-
-        post = self.post
+        post_count = Post.objects.count()
         form_data = {
             "text": REFRESHED_TEXT,
-            "group": self.group.id,
+            "group": self.group2.id
         }
-        response = self.authorized_client.post(
-            reverse(URL_POST_EDIT, args=[post.id]),
-            data=form_data,
-        )
+        self.authorized_client.post(
+            self.POST_EDIT_URL, data=form_data, follow=True)
         # Обновляем post методом refresh_from_db()
-        post.refresh_from_db()
-        self.assertRedirects(
-            response, reverse(URL_POST_DETAIL, args=[post.id])
-        )
+        # post.refresh_from_db()
+        extract_last_post = Post.objects.last()
+        self.assertNotEqual(
+            extract_last_post.text,
+            self.post.text,
+            "Пост не изменился")
         self.assertTrue(
             Post.objects.filter(
-                text=REFRESHED_TEXT,
-                group=self.group.id,
-                author=self.auth_user
-            ).exists()
-        )
-        # Проверяем редактирование поста не автором
-        response = self.not_author_authorized_client.get(
-            reverse(URL_POST_EDIT, args=[post.id])
+                text=form_data["text"],
+                group=form_data["group"],
+                author=self.post.author
+            ).exists(),
+            "Пост с обновленными данными не найден"
         )
         self.assertRedirects(
-            response, reverse(URL_POST_DETAIL, args=[post.id]))
+            self.not_author_authorized_client.get(self.POST_EDIT_URL),
+            self.POST_DETAIL_URL)
+        self.assertEqual(
+            post_count,
+            Post.objects.count(),
+            "Количество постов изменилось")
 
     def test_create_post_form(self):
         """Валидная форма создает новый пост."""
@@ -83,38 +92,27 @@ class PostFormTest(TestCase):
         # Очищаем бд
         Post.objects.all().delete()
         # Создаем новый пост, он будет  1 единственный в бд
-        response = self.authorized_client.post(URL_POST_CREATE, data=form_data)
-        self.assertRedirects(response, URL_PROFFILE)
-        self.assertTrue(
-            Post.objects.filter(
-                text=NEW_POST_TEXT,
-                group=self.group.id,
-                author=self.auth_user
-            ).exists()
-        )
+        response = self.authorized_client.post(POST_CREATE_URL, data=form_data)
+        self.assertRedirects(response, PROFFILE_URL)
+        self.assertTrue(Post.objects.filter(
+            text=form_data["text"]).exists())
+        self.assertTrue(Post.objects.filter(
+            group=form_data["group"]).exists())
+        self.assertTrue(Post.objects.filter(
+            author=self.post.author).exists())
+        self.assertEqual(
+            Post.objects.count(), 1, "Количество новых постов не равно одному")
 
     def test_form_post_create_and_post_edit(self):
-        """Форма создания поста корректна."""
-        response = self.authorized_client.get(URL_POST_CREATE)
-        form_fields = {
-            "text": forms.fields.CharField,
-            "group": forms.fields.ChoiceField,
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get("form").fields.get(value)
-                self.assertIsInstance(form_field, expected)
-
-    def test_form_post_edit(self):
-        """Форма редактирования поста корректна"""
-        response = self.authorized_client.get(
-            reverse(URL_POST_EDIT, args=[self.post.id])
-        )
-        form_fields = {
-            "text": forms.fields.CharField,
-            "group": forms.fields.ChoiceField,
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get("form").fields.get(value)
-                self.assertIsInstance(form_field, expected)
+        """Формы создания и редкатирования поста корректны."""
+        urls = (self.POST_EDIT_URL, POST_CREATE_URL)
+        for url in urls:
+            response = self.authorized_client.get(url)
+            form_fields = {
+                "text": forms.fields.CharField,
+                "group": forms.fields.ChoiceField,
+            }
+            for value, expected in form_fields.items():
+                with self.subTest(value=value):
+                    form_field = response.context.get("form").fields.get(value)
+                    self.assertIsInstance(form_field, expected)
