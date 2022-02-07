@@ -13,7 +13,12 @@ SECRET_KEY = "!ac^#b-45_c@idq#c@=3fr-uj#3a)*l#vtc^-yd#j$p$i*h9x#"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+    'testserver',
+]
 
 
 # Application definition
@@ -115,3 +120,4 @@ LOGIN_REDIRECT_URL = "posts:index"
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 POSTS_ON_PAGE = 10
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
