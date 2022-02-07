@@ -14,6 +14,7 @@ GROUP_LIST_URL = reverse("posts:group_list", args=[SLUG])
 LOGIN_URL = reverse("users:login")
 POST_CREATE_URL = reverse("posts:post_create")
 FOLLOW_REDIRECT_CREATE_TO_LOGIN = f"{LOGIN_URL}?next={POST_CREATE_URL}"
+PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
 
 
 class StaticURLTests(TestCase):
@@ -32,13 +33,10 @@ class StaticURLTests(TestCase):
             text=POST_TEXT,
             group=cls.group,
         )
-        cls.PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
         cls.POST_DETAIL_URL = reverse("posts:post_detail", args=[cls.post.id])
         cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
-        cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = \
-            f"{LOGIN_URL}?next={cls.POST_EDIT_URL}"
-        cls.FOLLOW_REDIRECT_CREATE_TO_LOGIN = \
-            f"{LOGIN_URL}?next={POST_CREATE_URL}"
+        cls.FOLLOW_REDIRECT_EDIT_TO_LOGIN = (
+            f"{LOGIN_URL}?next={cls.POST_EDIT_URL}")
 
     def setUp(self):
         self.guest_client = Client()
@@ -48,32 +46,23 @@ class StaticURLTests(TestCase):
         self.authorized_client_post_author.force_login(self.auth_user)
 
     def test_urls_exists_at_desired_locations(self):
-        """Проверка доступности URL."""
-        urls = [
-            INDEX_URL,
-            GROUP_LIST_URL,
-            self.PROFFILE_URL,
-            self.POST_DETAIL_URL,
-            POST_CREATE_URL,
-            self.POST_EDIT_URL,
-        ]
-        for url in urls:
-            with self.subTest(url=url):
-                self.assertEqual(
-                    self.authorized_client_post_author.get(
-                        url).status_code, 200)
-
-    def test_post_create_or_edit_redirect_login(self):
-        """Возвращает HTTP status code 302
-        для неавторизированного пользователя.
+        """Проверка доступности URL.
+        Сервер возращает ожидаемый HTTP status code.
         """
-        urls = [POST_CREATE_URL, self.POST_EDIT_URL]
-        for url in urls:
+        set = [
+            [INDEX_URL, 200, self.authorized_client_post_author],
+            [GROUP_LIST_URL, 200, self.authorized_client_post_author],
+            [PROFFILE_URL, 200, self.authorized_client_post_author],
+            [self.POST_DETAIL_URL, 200, self.authorized_client_post_author],
+            [POST_CREATE_URL, 200, self.authorized_client_post_author],
+            [self.POST_EDIT_URL, 200, self.authorized_client_post_author],
+            [POST_CREATE_URL, 302, self.guest_client],
+            [self.POST_EDIT_URL, 302, self.guest_client],
+            [self.POST_EDIT_URL, 302, self.authorized_client]
+        ]
+        for url, status_code, client in set:
             with self.subTest(url=url):
-                response = self.guest_client.get(url)
-                self.assertEqual(
-                    response.status_code,
-                    302)
+                self.assertEqual(client.get(url).status_code, status_code)
 
     def test_post_create_or_edit_redirect_login(self):
         """Перенаправляет анонимного пользователя и не автора поста"""
@@ -96,7 +85,7 @@ class StaticURLTests(TestCase):
         template_url_names = {
             INDEX_URL: "posts/index.html",
             GROUP_LIST_URL: "posts/group_list.html",
-            self.PROFFILE_URL: "posts/profile.html",
+            PROFFILE_URL: "posts/profile.html",
             self.POST_DETAIL_URL: "posts/post_detail.html",
             POST_CREATE_URL: "posts/create_post.html",
             self.POST_EDIT_URL: "posts/create_post.html",

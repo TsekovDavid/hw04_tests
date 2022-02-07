@@ -9,41 +9,35 @@ from .models import Group, Post, User
 
 def paginator_view(request, post_list):
     return Paginator(post_list, POSTS_ON_PAGE).get_page(
-        request.GET.get("page")
-    )
+        request.GET.get("page"))
 
 
 def index(request):
-    return render(
-        request,
-        "posts/index.html", {
-            "page_obj": paginator_view(request, Post.objects.all()),
-        })
+    return render(request, "posts/index.html", {
+        "page_obj": paginator_view(request, Post.objects.all())
+    })
 
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     return render(request, "posts/group_list.html", {
         "group": group,
-        "page_obj": paginator_view(request, group.posts.all()),
+        "page_obj": paginator_view(request, group.posts.all())
     })
 
 
 def profile(request, username):
     user = get_object_or_404(User, username=username)
-    return render(
-        request,
-        "posts/profile.html", {
-            "author": user,
-            "page_obj": paginator_view(request, user.posts.all()),
-        })
+    return render(request, "posts/profile.html", {
+        "author": user,
+        "page_obj": paginator_view(request, user.posts.all()),
+    })
 
 
 def post_detail(request, post_id):
-    return render(
-        request, "posts/post_detail.html", {
-            "post": get_object_or_404(Post, id=post_id)
-        })
+    return render(request, "posts/post_detail.html", {
+        "post": get_object_or_404(Post, id=post_id)
+    })
 
 
 @login_required

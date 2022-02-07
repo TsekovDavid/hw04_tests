@@ -53,16 +53,30 @@ class YatubeViewsTest(TestCase):
         self.authorized_client_post_author = Client()
         self.authorized_client_post_author.force_login(self.auth_user)
 
-    def test_group_page_show_correct_context(self):
-        """При создании поста с группой он появляется на страницах: автора,
-        главной, сообщества.
-        Шаблоны сформированы с правильным контекстом.
-        """
+    def test_proffile_page_show_correct_context(self):
+        """Страница автора формируется с корректным контекстом."""
+        self.assertEqual(
+            self.authorized_client.get(PROFFILE_URL).context["author"],
+            self.post.author)
+
+    def test_group_list_show_correct_context(self):
+        """Страница сообщества формируется с корректным контекстом."""
+        response = self.authorized_client.get(GROUP_LIST_URL)
+        self.assertEqual(response.context["group"], self.post.group)
+        self.assertEqual(
+            response.context['group'].title,
+            self.post.group.title)
+        self.assertEqual(
+            response.context["group"].description,
+            self.post.group.description)
+
+    def test_post_displayed_in_the_correct_pages(self):
         adresses = [
             INDEX_URL,
             GROUP_LIST_URL,
-            PROFFILE_URL,
-            self.POST_DETAIL_URL
+            self.POST_DETAIL_URL,
+            GROUP_LIST_URL,
+            PROFFILE_URL
         ]
         for adress in adresses:
             with self.subTest(adress=adress):
@@ -70,23 +84,15 @@ class YatubeViewsTest(TestCase):
                 if adress == self.POST_DETAIL_URL:
                     self.assertEqual(
                         self.post, response.context["post"])
-                elif adress == PROFFILE_URL:
-                    self.assertEqual(
-                        response.context["author"],
-                        self.post.author)
-                elif adress == GROUP_LIST_URL:
-                    self.assertEqual(
-                        response.context["group"],
-                        self.post.group)
                 else:
                     post = response.context["page_obj"][0]
                     self.assertEqual(len(response.context["page_obj"]), 1)
                 self.assertEqual(post.text, self.post.text)
                 self.assertEqual(post.group, self.post.group)
-                self.assertEqual(self.auth_user, self.post.author)
+                self.assertEqual(self.post.pk, post.pk)
 
     def test_post_is_not_displayed_in_someone_elses_group(self):
-        """Пост неотображается в чужом сообществе."""
+        """Пост не отображается в чужом сообществе."""
         response = self.authorized_client.get(SECOND_GROUP_LIST_URL)
         self.assertNotIn(Post.objects.get(id=1), response.context["page_obj"])
 

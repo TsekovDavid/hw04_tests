@@ -53,6 +53,7 @@ class PostFormTest(TestCase):
         """Валидная форма обновляет выбранный пост."""
         REFRESHED_TEXT = "Новый текст для поста"
         post_count = Post.objects.count()
+        post = self.post
         form_data = {
             "text": REFRESHED_TEXT,
             "group": self.group2.id
@@ -60,23 +61,15 @@ class PostFormTest(TestCase):
         self.authorized_client.post(
             self.POST_EDIT_URL, data=form_data, follow=True)
         # Обновляем post методом refresh_from_db()
-        # post.refresh_from_db()
-        extract_last_post = Post.objects.last()
-        self.assertNotEqual(
-            extract_last_post.text,
-            self.post.text,
-            "Пост не изменился")
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data["text"],
-                group=form_data["group"],
-                author=self.post.author
-            ).exists(),
-            "Пост с обновленными данными не найден"
-        )
-        self.assertRedirects(
-            self.not_author_authorized_client.get(self.POST_EDIT_URL),
-            self.POST_DETAIL_URL)
+        post.refresh_from_db()
+        self.assertEqual(
+            post.text,
+            form_data["text"],
+            "Текст поста не изменился")
+        self.assertEqual(
+            post.group.id,
+            form_data["group"],
+            "Группа у поста осталась прежней")
         self.assertEqual(
             post_count,
             Post.objects.count(),
@@ -93,25 +86,28 @@ class PostFormTest(TestCase):
         Post.objects.all().delete()
         # Создаем новый пост, он будет  1 единственный в бд
         response = self.authorized_client.post(POST_CREATE_URL, data=form_data)
+        post = Post.objects.all()[0]
         self.assertRedirects(response, PROFFILE_URL)
-        self.assertTrue(Post.objects.filter(
-            text=form_data["text"]).exists())
-        self.assertTrue(Post.objects.filter(
-            group=form_data["group"]).exists())
-        self.assertTrue(Post.objects.filter(
-            author=self.post.author).exists())
+        self.assertEqual(
+            post.text,
+            form_data["text"],
+            "Текст поста отличается от текста в форме")
+        self.assertEqual(
+            post.group.id,
+            form_data["group"],
+            "Группа поста отличается от группы указанной в форме")
         self.assertEqual(
             Post.objects.count(), 1, "Количество новых постов не равно одному")
 
     def test_form_post_create_and_post_edit(self):
         """Формы создания и редкатирования поста корректны."""
+        form_fields = {
+            "text": forms.fields.CharField,
+            "group": forms.fields.ChoiceField,
+        }
         urls = (self.POST_EDIT_URL, POST_CREATE_URL)
         for url in urls:
             response = self.authorized_client.get(url)
-            form_fields = {
-                "text": forms.fields.CharField,
-                "group": forms.fields.ChoiceField,
-            }
             for value, expected in form_fields.items():
                 with self.subTest(value=value):
                     form_field = response.context.get("form").fields.get(value)
