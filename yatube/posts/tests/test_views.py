@@ -79,8 +79,6 @@ class YatubeViewsTest(TestCase):
                 response = self.another.get(adress)
                 if adress == self.POST_DETAIL_URL:
                     post = response.context["post"]
-                    self.assertEqual(
-                        self.post, post)
                 else:
                     post = response.context["page_obj"][0]
                     self.assertEqual(len(response.context["page_obj"]), 1)
@@ -91,9 +89,8 @@ class YatubeViewsTest(TestCase):
 
     def test_post_is_not_displayed_in_someone_elses_group(self):
         """Пост не отображается в чужом сообществе."""
-        group = self.another.get(SECOND_GROUP_LIST_URL).context["group"]
-        self.assertNotEqual(group, self.group.id)
-        self.assertNotEqual(group.slug, self.group.slug)
+        response = self.another.get(SECOND_GROUP_LIST_URL)
+        self.assertNotIn(self.post, response.context["page_obj"])
 
 
 class PaginatorViewsTest(TestCase):

@@ -24,6 +24,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    "sorl.thumbnail",
     "posts.apps.PostsConfig",
     "about.apps.AboutConfig",
     "users.apps.UsersConfig",
