@@ -7,6 +7,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/2.2/howto/static-files/
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "!ac^#b-45_c@idq#c@=3fr-uj#3a)*l#vtc^-yd#j$p$i*h9x#"
 
@@ -24,7 +30,6 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    "sorl.thumbnail",
     "posts.apps.PostsConfig",
     "about.apps.AboutConfig",
     "users.apps.UsersConfig",
@@ -35,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "sorl.thumbnail",
 ]
 
 MIDDLEWARE = [
