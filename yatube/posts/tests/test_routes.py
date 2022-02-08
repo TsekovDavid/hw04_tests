@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from ..models import User, Group, Post
+from ..models import User, Post
 
 
 SLUG = "testslug"
