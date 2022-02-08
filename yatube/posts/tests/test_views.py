@@ -47,25 +47,25 @@ class YatubeViewsTest(TestCase):
         cls.POST_DETAIL_URL = reverse("posts:post_detail", args=[cls.post.id])
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.authorized_client_post_author = Client()
-        self.authorized_client_post_author.force_login(self.auth_user)
+        self.guest = Client()
+        self.another = Client()
+        self.another.force_login(self.user)
+        self.author = Client()
+        self.author.force_login(self.auth_user)
 
     def test_profile_page_show_correct_context(self):
         """Страница автора формируется с корректным контекстом."""
         self.assertEqual(
-            self.authorized_client.get(PROFILE_URL).context["author"],
+            self.another.get(PROFILE_URL).context["author"],
             self.post.author)
 
     def test_group_list_show_correct_context(self):
         """Страница сообщества формируется с корректным контекстом."""
-        response = self.authorized_client.get(GROUP_LIST_URL)
-        group = response.context["group"]
+        group = self.another.get(GROUP_LIST_URL).context["group"]
         self.assertEqual(group.id, self.post.group.id)
         self.assertEqual(group.title, self.post.group.title)
         self.assertEqual(group.description, self.post.group.description)
+        self.assertEqual(group.slug, self.post.group.slug)
 
     def test_post_displayed_in_the_correct_pages(self):
         adresses = [
@@ -76,10 +76,11 @@ class YatubeViewsTest(TestCase):
         ]
         for adress in adresses:
             with self.subTest(adress=adress):
-                response = self.authorized_client.get(adress)
+                response = self.another.get(adress)
                 if adress == self.POST_DETAIL_URL:
+                    post = response.context["post"]
                     self.assertEqual(
-                        self.post, response.context["post"])
+                        self.post, post)
                 else:
                     post = response.context["page_obj"][0]
                     self.assertEqual(len(response.context["page_obj"]), 1)
@@ -90,8 +91,9 @@ class YatubeViewsTest(TestCase):
 
     def test_post_is_not_displayed_in_someone_elses_group(self):
         """Пост не отображается в чужом сообществе."""
-        response = self.authorized_client.get(SECOND_GROUP_LIST_URL)
-        self.assertNotIn(Post.objects.get(id=1), response.context["page_obj"])
+        group = self.another.get(SECOND_GROUP_LIST_URL).context["group"]
+        self.assertNotEqual(group, self.group.id)
+        self.assertNotEqual(group.slug, self.group.slug)
 
 
 class PaginatorViewsTest(TestCase):

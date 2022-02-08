@@ -61,11 +61,10 @@ class URLTests(TestCase):
             [self.POST_EDIT_URL, 302, self.another, "another"],
         ]
         for url, status_code, client, user in set:
-            with self.subTest(url=url):
+            with self.subTest(url=url, client=user):
                 self.assertEqual(
                     client.get(url).status_code,
-                    status_code,
-                    f"Запрос {url} от {user} клиента")
+                    status_code)
 
     def test_post_create_or_edit_redirect_login(self):
         """Перенаправляет анонимного пользователя и не автора поста"""
