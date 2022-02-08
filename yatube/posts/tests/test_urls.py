@@ -14,10 +14,10 @@ GROUP_LIST_URL = reverse("posts:group_list", args=[SLUG])
 LOGIN_URL = reverse("users:login")
 POST_CREATE_URL = reverse("posts:post_create")
 FOLLOW_REDIRECT_CREATE_TO_LOGIN = f"{LOGIN_URL}?next={POST_CREATE_URL}"
-PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
+PROFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
 
 
-class StaticURLTests(TestCase):
+class URLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -39,39 +39,42 @@ class StaticURLTests(TestCase):
             f"{LOGIN_URL}?next={cls.POST_EDIT_URL}")
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.authorized_client_post_author = Client()
-        self.authorized_client_post_author.force_login(self.auth_user)
+        self.guest = Client()
+        self.another = Client()
+        self.another.force_login(self.user)
+        self.author = Client()
+        self.author.force_login(self.auth_user)
 
     def test_urls_exists_at_desired_locations(self):
         """Проверка доступности URL.
         Сервер возращает ожидаемый HTTP status code.
         """
         set = [
-            [INDEX_URL, 200, self.authorized_client_post_author],
-            [GROUP_LIST_URL, 200, self.authorized_client_post_author],
-            [PROFFILE_URL, 200, self.authorized_client_post_author],
-            [self.POST_DETAIL_URL, 200, self.authorized_client_post_author],
-            [POST_CREATE_URL, 200, self.authorized_client_post_author],
-            [self.POST_EDIT_URL, 200, self.authorized_client_post_author],
-            [POST_CREATE_URL, 302, self.guest_client],
-            [self.POST_EDIT_URL, 302, self.guest_client],
-            [self.POST_EDIT_URL, 302, self.authorized_client]
+            [INDEX_URL, 200, self.author, "author"],
+            [GROUP_LIST_URL, 200, self.author, "author"],
+            [PROFILE_URL, 200, self.author, "author"],
+            [self.POST_DETAIL_URL, 200, self.author, "author"],
+            [POST_CREATE_URL, 200, self.author, "author"],
+            [self.POST_EDIT_URL, 200, self.author, "author"],
+            [POST_CREATE_URL, 302, self.guest, "guest"],
+            [self.POST_EDIT_URL, 302, self.guest, "guest"],
+            [self.POST_EDIT_URL, 302, self.another, "another"],
         ]
-        for url, status_code, client in set:
+        for url, status_code, client, user in set:
             with self.subTest(url=url):
-                self.assertEqual(client.get(url).status_code, status_code)
+                self.assertEqual(
+                    client.get(url).status_code,
+                    status_code,
+                    f"Запрос {url} от {user} клиента")
 
     def test_post_create_or_edit_redirect_login(self):
         """Перенаправляет анонимного пользователя и не автора поста"""
         urls = [
-            [self.guest_client, POST_CREATE_URL,
+            [self.guest, POST_CREATE_URL,
                 FOLLOW_REDIRECT_CREATE_TO_LOGIN],
-            [self.guest_client, self.POST_EDIT_URL,
+            [self.guest, self.POST_EDIT_URL,
                 self.FOLLOW_REDIRECT_EDIT_TO_LOGIN],
-            [self.authorized_client, self.POST_EDIT_URL,
+            [self.another, self.POST_EDIT_URL,
                 self.POST_DETAIL_URL],
         ]
         for client, url, redirect_url in urls:
@@ -85,7 +88,7 @@ class StaticURLTests(TestCase):
         template_url_names = {
             INDEX_URL: "posts/index.html",
             GROUP_LIST_URL: "posts/group_list.html",
-            PROFFILE_URL: "posts/profile.html",
+            PROFILE_URL: "posts/profile.html",
             self.POST_DETAIL_URL: "posts/post_detail.html",
             POST_CREATE_URL: "posts/create_post.html",
             self.POST_EDIT_URL: "posts/create_post.html",
@@ -93,5 +96,5 @@ class StaticURLTests(TestCase):
         for address, template in template_url_names.items():
             with self.subTest(address=address):
                 self.assertTemplateUsed(
-                    self.authorized_client_post_author.get(address), template
+                    self.author.get(address), template
                 )

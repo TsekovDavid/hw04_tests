@@ -20,7 +20,7 @@ FOLLOW_REDIRECT_CREATE_TO_LOGIN = f"{LOGIN_URL}?next={POST_CREATE_URL}"
 SECOND_GROUP_LIST_URL = reverse("posts:group_list", args=[SECOND_SLUG])
 GROUP_LIST_URL = reverse("posts:group_list", args=[SLUG])
 INDEX_URL = reverse("posts:index")
-PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
+PROFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
 
 
 class YatubeViewsTest(TestCase):
@@ -53,30 +53,26 @@ class YatubeViewsTest(TestCase):
         self.authorized_client_post_author = Client()
         self.authorized_client_post_author.force_login(self.auth_user)
 
-    def test_proffile_page_show_correct_context(self):
+    def test_profile_page_show_correct_context(self):
         """Страница автора формируется с корректным контекстом."""
         self.assertEqual(
-            self.authorized_client.get(PROFFILE_URL).context["author"],
+            self.authorized_client.get(PROFILE_URL).context["author"],
             self.post.author)
 
     def test_group_list_show_correct_context(self):
         """Страница сообщества формируется с корректным контекстом."""
         response = self.authorized_client.get(GROUP_LIST_URL)
-        self.assertEqual(response.context["group"], self.post.group)
-        self.assertEqual(
-            response.context['group'].title,
-            self.post.group.title)
-        self.assertEqual(
-            response.context["group"].description,
-            self.post.group.description)
+        group = response.context["group"]
+        self.assertEqual(group.id, self.post.group.id)
+        self.assertEqual(group.title, self.post.group.title)
+        self.assertEqual(group.description, self.post.group.description)
 
     def test_post_displayed_in_the_correct_pages(self):
         adresses = [
             INDEX_URL,
             GROUP_LIST_URL,
             self.POST_DETAIL_URL,
-            GROUP_LIST_URL,
-            PROFFILE_URL
+            PROFILE_URL
         ]
         for adress in adresses:
             with self.subTest(adress=adress):
@@ -90,6 +86,7 @@ class YatubeViewsTest(TestCase):
                 self.assertEqual(post.text, self.post.text)
                 self.assertEqual(post.group, self.post.group)
                 self.assertEqual(self.post.pk, post.pk)
+                self.assertEqual(self.post.author, post.author)
 
     def test_post_is_not_displayed_in_someone_elses_group(self):
         """Пост не отображается в чужом сообществе."""
@@ -120,10 +117,10 @@ class PaginatorViewsTest(TestCase):
         POSTS_ON_PAGE_2 = self.BATCH_SIZE - POSTS_ON_PAGE
         set = [
             [INDEX_URL, POSTS_ON_PAGE],
-            [PROFFILE_URL, POSTS_ON_PAGE],
+            [PROFILE_URL, POSTS_ON_PAGE],
             [GROUP_LIST_URL, POSTS_ON_PAGE],
             [INDEX_URL + "?page=2", POSTS_ON_PAGE_2],
-            [PROFFILE_URL + "?page=2", POSTS_ON_PAGE_2],
+            [PROFILE_URL + "?page=2", POSTS_ON_PAGE_2],
             [GROUP_LIST_URL + "?page=2", POSTS_ON_PAGE_2],
         ]
         for url, posts_count in set:

@@ -14,7 +14,7 @@ GROUP_DESCRIPTION = "Тестовое описание"
 SECOND_GROUP_TITLE = "Вторая тестовая группа"
 SECOND_SLUG = "new_group"
 SECOND_GROUP_DESCRIPTION = "Тестовое описание второй группы"
-PROFFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
+PROFILE_URL = reverse("posts:profile", args=[AUTHOR_USERNAME])
 POST_CREATE_URL = reverse("posts:post_create")
 
 
@@ -51,25 +51,27 @@ class PostFormTest(TestCase):
 
     def test_post_edit(self):
         """Валидная форма обновляет выбранный пост."""
-        REFRESHED_TEXT = "Новый текст для поста"
         post_count = Post.objects.count()
-        post = self.post
         form_data = {
-            "text": REFRESHED_TEXT,
+            "text": "Новый текст для поста",
             "group": self.group2.id
         }
         self.authorized_client.post(
             self.POST_EDIT_URL, data=form_data, follow=True)
-        # Обновляем post методом refresh_from_db()
-        post.refresh_from_db()
+        refresh_post = self.authorized_client.get(
+            self.POST_DETAIL_URL).context["post"]
         self.assertEqual(
-            post.text,
+            refresh_post.text,
             form_data["text"],
             "Текст поста не изменился")
         self.assertEqual(
-            post.group.id,
+            refresh_post.group.id,
             form_data["group"],
             "Группа у поста осталась прежней")
+        self.assertEqual(
+            refresh_post.author,
+            self.auth_user,
+            "Автор поста изменился")
         self.assertEqual(
             post_count,
             Post.objects.count(),
@@ -77,9 +79,8 @@ class PostFormTest(TestCase):
 
     def test_create_post_form(self):
         """Валидная форма создает новый пост."""
-        NEW_POST_TEXT = "Тестовый текст 123"
         form_data = {
-            "text": NEW_POST_TEXT,
+            "text": "Тестовый текст 123",
             "group": self.group.id,
         }
         # Очищаем бд
@@ -87,11 +88,15 @@ class PostFormTest(TestCase):
         # Создаем новый пост, он будет  1 единственный в бд
         response = self.authorized_client.post(POST_CREATE_URL, data=form_data)
         post = Post.objects.all()[0]
-        self.assertRedirects(response, PROFFILE_URL)
+        self.assertRedirects(response, PROFILE_URL)
         self.assertEqual(
             post.text,
             form_data["text"],
             "Текст поста отличается от текста в форме")
+        self.assertEqual(
+            post.author,
+            self.auth_user,
+            "Автор поста отличается от авторизованного пользователя")
         self.assertEqual(
             post.group.id,
             form_data["group"],
