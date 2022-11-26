@@ -1,3 +1,56 @@
-# hw04_tests
+## Тесты для проекта «Yatube»
 
-[![CI](https://github.com/yandex-praktikum/hw04_tests/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/yandex-praktikum/hw04_tests/actions/workflows/python-app.yml)
+- Тестирование моделей
+  - Протестированы модели приложения posts в Yatube
+
+- Тестирование URLs
+  - Проверка доступности страниц и названия шаблонов приложения Posts проекта Yatube. Проверка учитывает права доступа
+
+- Тстирование Views
+  - Тесты которые проверяют, что во view-функциях используются правильные html-шаблоны
+
+- Тестирование Views
+  - Проверка словаря context, передаваемого в шаблон при вызове
+
+- Тестирование Forms
+  - при отправке валидной формы со страницы создания поста
+  - при отправке валидной формы со страницы редактирования поста
+
+## Инструкция по установке
+
+* Клонируем репозиторий
+
+```
+git clone https://github.com/TsekovDavid/hw04_tests.git
+```
+
+* Устанавливаем отдельное виртуальное окружение
+
+```
+python3 -m venv venv
+```
+
+* Активируем виртуальное окружение
+
+windows
+```
+source venv/Scripts/activate
+```
+macos
+```
+. venv/bin/activate
+```
+
+* Устанавливаем зависимости
+
+```
+python3 -m pip3 install --upgrade pip
+pip3 install -r requirements.txt
+```
+
+* Выполняем миграции
+
+```
+python3 manage.py makemigrations
+python3 manage.py migrate
+```
